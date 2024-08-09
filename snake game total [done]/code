@@ -1,0 +1,168 @@
+import pygame
+import random
+import os
+
+# Initialize Pygame
+pygame.init()
+
+# Screen dimensions
+WIDTH, HEIGHT = 800, 600
+BORDER_THICKNESS = 10  # Thicker border
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Snake Game")
+
+# Colors
+SNAKE_COLOR = (115, 189, 113)  # #73bd2e
+BG_COLOR = (247, 230, 151)  # #f7e697
+BORDER_COLOR = (188, 174, 118)  # #bcae76
+EYE_COLOR = (83, 71, 26)  # #53471a
+SCORE_BOX_COLOR = (82, 127, 36)  # #527f24
+BUTTON_COLOR = BORDER_COLOR
+TEXT_COLOR = (255, 255, 255)
+LOST_TEXT_COLOR = (255, 0, 0)  # Bright red for "You Lost!"
+
+# Path to images
+current_dir = os.path.dirname(__file__)
+APPLE_IMG_PATH = os.path.join(current_dir, 'apple.png')
+
+# Load apple image
+try:
+    apple_img = pygame.image.load(APPLE_IMG_PATH)
+except FileNotFoundError:
+    print(f"File not found: {APPLE_IMG_PATH}")
+    pygame.quit()
+    exit()
+
+# Clock for controlling game speed
+clock = pygame.time.Clock()
+
+# Snake properties
+snake_block = 20
+snake_speed = 10  # Adjust this value to change the speed of the snake
+
+# Font for score and buttons
+font_style = pygame.font.SysFont(None, 50)  # Increased font size for "You Lost!" message
+score_font = pygame.font.SysFont(None, 35)
+button_font = pygame.font.SysFont(None, 40)  # Font size for button text
+
+def message(msg, color):
+    mesg = font_style.render(msg, True, color)
+    text_rect = mesg.get_rect(center=(WIDTH / 2, HEIGHT / 3))
+    screen.blit(mesg, text_rect)
+
+def draw_snake(snake_list):
+    for i, block in enumerate(snake_list):
+        pygame.draw.rect(screen, SNAKE_COLOR, [block[0], block[1], snake_block, snake_block])
+        # Draw eyes on the head of the snake
+        if i == 0:
+            eye_radius = 3
+            pygame.draw.circle(screen, EYE_COLOR, [block[0] + snake_block // 4, block[1] + snake_block // 4], eye_radius)
+            pygame.draw.circle(screen, EYE_COLOR, [block[0] + 3 * snake_block // 4, block[1] + snake_block // 4], eye_radius)
+
+def show_score(score):
+    value = score_font.render("Your Score: " + str(score), True, SCORE_BOX_COLOR)
+    screen.blit(value, [BORDER_THICKNESS + 10, BORDER_THICKNESS + 10])  # Inside the border
+
+def draw_button(text, pos, width, height, color, text_color):
+    button_rect = pygame.Rect(pos[0], pos[1], width, height)
+    pygame.draw.rect(screen, color, button_rect, border_radius=20)  # Larger border radius
+    text_surface = button_font.render(text, True, text_color)
+    text_rect = text_surface.get_rect(center=button_rect.center)
+    screen.blit(text_surface, text_rect)
+
+def gameLoop():
+    game_over = False
+    game_close = False
+
+    x1 = WIDTH / 2
+    y1 = HEIGHT / 2
+
+    x1_change = 0
+    y1_change = 0
+
+    snake_List = []
+    Length_of_snake = 1
+
+    # Initial apple position within the border
+    apple_x = round(random.randrange(BORDER_THICKNESS, WIDTH - BORDER_THICKNESS - snake_block) / 20.0) * 20.0
+    apple_y = round(random.randrange(BORDER_THICKNESS, HEIGHT - BORDER_THICKNESS - snake_block) / 20.0) * 20.0
+
+    score = 0
+
+    while not game_over:
+
+        while game_close == True:
+            screen.fill(BG_COLOR)
+
+            # Display "You Lost!" message in the center
+            message("You Lost!", LOST_TEXT_COLOR)
+
+            # Draw Retry and Exit buttons
+            draw_button("Retry", (WIDTH / 4 - 100, HEIGHT / 2 - 50), 200, 100, BUTTON_COLOR, TEXT_COLOR)
+            draw_button("Exit", (3 * WIDTH / 4 - 100, HEIGHT / 2 - 50), 200, 100, BUTTON_COLOR, TEXT_COLOR)
+
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    game_over = True
+                    game_close = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_x, mouse_y = event.pos
+                    if WIDTH / 4 - 100 < mouse_x < WIDTH / 4 + 100 and HEIGHT / 2 - 50 < mouse_y < HEIGHT / 2 + 50:
+                        gameLoop()
+                    elif 3 * WIDTH / 4 - 100 < mouse_x < 3 * WIDTH / 4 + 100 and HEIGHT / 2 - 50 < mouse_y < HEIGHT / 2 + 50:
+                        game_over = True
+                        game_close = False
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_over = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    x1_change = -snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_RIGHT:
+                    x1_change = snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_UP:
+                    y1_change = -snake_block
+                    x1_change = 0
+                elif event.key == pygame.K_DOWN:
+                    y1_change = snake_block
+                    x1_change = 0
+
+        if x1 >= WIDTH - BORDER_THICKNESS or x1 < BORDER_THICKNESS or y1 >= HEIGHT - BORDER_THICKNESS or y1 < BORDER_THICKNESS:
+            game_close = True
+        x1 += x1_change
+        y1 += y1_change
+        screen.fill(BG_COLOR)
+        pygame.draw.rect(screen, BORDER_COLOR, [0, 0, WIDTH, HEIGHT], BORDER_THICKNESS)  # Thicker border
+
+        pygame.draw.rect(screen, (255, 0, 0), [apple_x, apple_y, snake_block, snake_block])
+        snake_Head = [x1, y1]  # Create the head of the snake
+        snake_List.insert(0, snake_Head)  # Insert the head at the start of the list
+
+        if len(snake_List) > Length_of_snake:
+            snake_List.pop()  # Remove the last element if the snake is too long
+
+        for x in snake_List[1:]:
+            if x == snake_Head:
+                game_close = True
+
+        draw_snake(snake_List)
+        show_score(score)
+
+        pygame.display.update()
+
+        if x1 == apple_x and y1 == apple_y:
+            apple_x = round(random.randrange(BORDER_THICKNESS, WIDTH - BORDER_THICKNESS - snake_block) / 20.0) * 20.0
+            apple_y = round(random.randrange(BORDER_THICKNESS, HEIGHT - BORDER_THICKNESS - snake_block) / 20.0) * 20.0
+            Length_of_snake += 1
+            score += 1
+
+        clock.tick(snake_speed)
+
+    pygame.quit()
+
+gameLoop()
